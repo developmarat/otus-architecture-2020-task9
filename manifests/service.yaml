@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: task9-service
+  labels:
+    app: task9-app
+spec:
+  selector:
+    app: task9-app
+  ports:
+    - name: web
+      protocol: TCP
+      port: 9000
+      targetPort: web
+  type: NodePort

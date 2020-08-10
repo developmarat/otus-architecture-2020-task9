@@ -1,0 +1,63 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: task9-initdb
+spec:
+  template:
+    metadata:
+      name: task9-initdb
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: post-install-job
+          env:
+            - name: DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: task9-config
+                  key: DATABASE_HOST
+            - name: DATABASE_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: task9-config
+                  key: DATABASE_DB
+            - name: DATABASE_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: task9-config
+                  key: DATABASE_USER
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: task9-secret
+                  key: DATABASE_PASSWORD
+          image: postgres:latest
+          command:
+            - sh
+            - "-c"
+            - |
+              until pg_isready -h $DATABASE_HOST;
+                do echo waiting for database; sleep 2;
+              done;
+              psql postgresql://$DATABASE_USER:$DATABASE_PASSWORD@$DATABASE_HOST/$DATABASE_DB <<'EOF'
+              create table app_order
+              (
+                  id               bigserial not null
+                      constraint order_pk
+                          primary key,
+                  status           varchar(256),
+                  client_id        bigserial not null,
+                  delivery_address text,
+                  payment_id       bigserial not null
+              );
+              create table app_order_product_set
+              (
+                  id         bigserial not null,
+                  order_id   bigserial not null
+                      constraint app_order_product_set_app_order_id_fk
+                          references app_order,
+                  product_id bigserial not null,
+                  count      integer
+              );
+              EOF
+  backoffLimit: 0
